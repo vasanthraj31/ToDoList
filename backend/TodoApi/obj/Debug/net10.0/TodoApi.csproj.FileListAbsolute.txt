@@ -31,3 +31,4 @@ D:\fullstack-todo\backend\TodoApi\obj\Debug\net10.0\refint\TodoApi.dll
 D:\fullstack-todo\backend\TodoApi\obj\Debug\net10.0\TodoApi.pdb
 D:\fullstack-todo\backend\TodoApi\obj\Debug\net10.0\TodoApi.genruntimeconfig.cache
 D:\fullstack-todo\backend\TodoApi\obj\Debug\net10.0\ref\TodoApi.dll
+D:\fullstack-todo\backend\TodoApi\obj\Debug\net10.0\TodoApi.sourcelink.json

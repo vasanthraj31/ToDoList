@@ -1,1 +1,72 @@
 /* App-specific styles — global styles are in index.css */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filter-group {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-btn,
+.secondary-btn,
+.save-btn,
+.icon-btn {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.filter-btn:hover,
+.secondary-btn:hover,
+.save-btn:hover,
+.icon-btn:hover {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.14);
+}
+
+.filter-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.secondary-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.edit-input {
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.icon-btn {
+  padding: 6px 8px;
+}
+
+.save-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+

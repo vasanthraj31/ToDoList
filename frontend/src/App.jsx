@@ -1,17 +1,16 @@
-import { useState, useEffect } from 'react';
-import { fetchTodos, createTodo, updateTodo, deleteTodo } from './api';
+import { useEffect, useMemo, useState } from 'react';
+import { createTodo, deleteTodo, fetchTodos, updateTodo } from './services/todoService';
 import './App.css';
 
 function App() {
-  // State: list of todos from the backend
   const [todos, setTodos] = useState([]);
-  // State: value of the input field
   const [inputValue, setInputValue] = useState('');
-  // State: loading and error messages
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Load todos when the page first loads (runs once)
   useEffect(() => {
     loadTodos();
   }, []);
@@ -21,57 +20,104 @@ function App() {
       setLoading(true);
       const data = await fetchTodos();
       setTodos(data);
-    } catch (err) {
+    } catch {
       setError('⚠️ Could not connect to backend. Is the .NET API running?');
     } finally {
       setLoading(false);
     }
   }
 
-  // Add a new todo
   async function handleAdd() {
     if (!inputValue.trim()) return;
     try {
       const newTodo = await createTodo(inputValue.trim());
       setTodos([...todos, newTodo]);
       setInputValue('');
+      setError('');
     } catch {
       setError('Failed to add todo.');
     }
   }
 
-  // Toggle completed/not completed
   async function handleToggle(todo) {
     const updated = { ...todo, isCompleted: !todo.isCompleted };
     try {
       await updateTodo(updated);
-      setTodos(todos.map(t => t.id === todo.id ? updated : t));
+      setTodos(todos.map(t => (t.id === todo.id ? updated : t)));
+      setError('');
     } catch {
       setError('Failed to update todo.');
     }
   }
 
-  // Delete a todo
   async function handleDelete(id) {
     try {
       await deleteTodo(id);
       setTodos(todos.filter(t => t.id !== id));
+      setError('');
     } catch {
       setError('Failed to delete todo.');
     }
   }
 
-  // Allow pressing Enter to add
+  function startEdit(todo) {
+    setEditingId(todo.id);
+    setEditValue(todo.title);
+  }
+
+  async function saveEdit(todoId) {
+    const trimmedTitle = editValue.trim();
+    if (!trimmedTitle) return;
+
+    const target = todos.find(todo => todo.id === todoId);
+    if (!target) return;
+
+    const updated = { ...target, title: trimmedTitle };
+
+    try {
+      await updateTodo(updated);
+      setTodos(todos.map(todo => (todo.id === todoId ? updated : todo)));
+      setEditingId(null);
+      setEditValue('');
+      setError('');
+    } catch {
+      setError('Failed to edit todo.');
+    }
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditValue('');
+  }
+
   function handleKeyDown(e) {
     if (e.key === 'Enter') handleAdd();
   }
 
+  async function clearCompleted() {
+    try {
+      const pendingTodos = todos.filter(todo => !todo.isCompleted);
+      for (const todo of todos.filter(todo => todo.isCompleted)) {
+        await deleteTodo(todo.id);
+      }
+      setTodos(pendingTodos);
+      setError('');
+    } catch {
+      setError('Failed to clear completed todos.');
+    }
+  }
+
   const completedCount = todos.filter(t => t.isCompleted).length;
+
+  const visibleTodos = useMemo(() => {
+    if (filter === 'active') return todos.filter(todo => !todo.isCompleted);
+    if (filter === 'completed') return todos.filter(todo => todo.isCompleted);
+    return todos;
+  }, [filter, todos]);
 
   return (
     <div className="page">
       <div className="card">
-        {/* Header */}
         <div className="header">
           <h1>📝 My Todo List</h1>
           <p className="subtitle">
@@ -79,7 +125,6 @@ function App() {
           </p>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="error-banner">
             {error}
@@ -87,7 +132,6 @@ function App() {
           </div>
         )}
 
-        {/* Input Section */}
         <div className="input-row">
           <input
             type="text"
@@ -102,37 +146,61 @@ function App() {
           </button>
         </div>
 
-        {/* Todo List */}
+        <div className="toolbar">
+          <div className="filter-group" role="tablist" aria-label="Todo filters">
+            <button className={`filter-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All</button>
+            <button className={`filter-btn ${filter === 'active' ? 'active' : ''}`} onClick={() => setFilter('active')}>Active</button>
+            <button className={`filter-btn ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')}>Completed</button>
+          </div>
+          <button className="secondary-btn" onClick={clearCompleted} disabled={completedCount === 0}>
+            Clear completed
+          </button>
+        </div>
+
         {loading ? (
           <p className="loading">Loading todos...</p>
-        ) : todos.length === 0 ? (
-          <p className="empty">No todos yet! Add one above 🎉</p>
+        ) : visibleTodos.length === 0 ? (
+          <p className="empty">No todos here yet! Add one above 🎉</p>
         ) : (
           <ul className="todo-list">
-            {todos.map(todo => (
+            {visibleTodos.map(todo => (
               <li key={todo.id} className={`todo-item ${todo.isCompleted ? 'done' : ''}`}>
-                {/* Checkbox */}
                 <input
                   type="checkbox"
                   className="todo-checkbox"
                   checked={todo.isCompleted}
                   onChange={() => handleToggle(todo)}
                 />
-                {/* Title */}
-                <span className="todo-title">{todo.title}</span>
-                {/* Delete Button */}
-                <button
-                  className="delete-btn"
-                  onClick={() => handleDelete(todo.id)}
-                >
-                  🗑️
-                </button>
+
+                {editingId === todo.id ? (
+                  <div className="edit-row">
+                    <input
+                      className="todo-input edit-input"
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') saveEdit(todo.id);
+                        if (e.key === 'Escape') cancelEdit();
+                      }}
+                      autoFocus
+                    />
+                    <button className="save-btn" onClick={() => saveEdit(todo.id)}>Save</button>
+                    <button className="secondary-btn" onClick={cancelEdit}>Cancel</button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="todo-title">{todo.title}</span>
+                    <div className="actions">
+                      <button className="icon-btn" onClick={() => startEdit(todo)}>✏️</button>
+                      <button className="delete-btn" onClick={() => handleDelete(todo.id)}>🗑️</button>
+                    </div>
+                  </>
+                )}
               </li>
             ))}
           </ul>
         )}
 
-        {/* Footer */}
         <div className="footer">
           <span>React + .NET Full Stack Demo</span>
         </div>

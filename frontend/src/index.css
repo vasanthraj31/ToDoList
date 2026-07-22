@@ -147,6 +147,10 @@ body {
   gap: 10px;
 }
 
+.todo-item .todo-input {
+  padding: 10px 12px;
+}
+
 .todo-item {
   display: flex;
   align-items: center;
